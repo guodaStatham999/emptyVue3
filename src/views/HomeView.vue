@@ -1,54 +1,47 @@
 <template>
-  <div>接口</div>
+  <div class="common-layout">
+    <el-container>
+      <el-aside width="200px">Aside</el-aside>
+      <el-container>
+        <el-header style="height: 50px">Header</el-header>
+        <el-main class="mainClass">
+          <!-- <div>1232</div> -->
+          <Mark :baseOptions="baseOptions"></Mark>
+        </el-main>
+        <el-footer style="height: 50px">Footer</el-footer>
+      </el-container>
+    </el-container>
+  </div>
 </template>
 
 <script>
-
-import { ref, reactive, toRefs, onMounted } from "vue";
-import { getslink } from "@/api/mockProxy.js";
+import Mark from "./mark.vue";
+import { toRefs, reactive } from "vue";
 export default {
-  components: {},
+  components: {
+    Mark,
+  },
   setup() {
     let state = reactive({
-      dataURL: "",
+      baseOptions: {
+        url:'',
+      },
     });
-    onMounted(() => {
-      getslink('',{
-        user:"你好",
-        
-      }).then(
-        (res) => {
-          console.log(res);
-        },
-        (reason) => {
-          console.log(reason);
-        }
-      );
-    });
+    setTimeout(()=>{
+      // 视频
+      // state.baseOptions.url = 'https://tilake.wenge.com/wos/data-center-a3f5de5e3/5ed6f010c8ab7606274901c13d4a6ec0.mp4'
+      // 图片
+      state.baseOptions.url = 'https://tse1-mm.cn.bing.net/th/id/OIP-C.QPH1IBosDYBqaU3O6wV3YAHaEo?pid=ImgDet&rs=1'
+    },1000)
     return {
-      // ...toRefs(state),
-      // downloadPic,
-      // toImage,
-      // handleConposeImg,
-      // editboxRef,
+      ...toRefs(state),
     };
   },
 };
 </script>
-
-<style  scoped>
-.viewWrap {
-  display: flex;
-}
-.editbox {
-  height: 500px;
-  width: 800px;
-  border: 1px solid #555;
-}
-.imgbox {
-  height: 400px;
-  width: 500px;
-  /* background-image: url(http://p1.pstatp.com/large/435d000085555bd8de10); */
-  background-size: 100% 100%;
+<style>
+.mainClass {
+  height: 100%;
+  height: calc(100vh - 78px - 100px);
 }
 </style>
