@@ -30,6 +30,7 @@ export default {
           endY: 156,
           height: 54,
           name: "rect-g-1675329600098",
+          preId: "1675329600098",
           startX: 138,
           startY: 102,
           width: 196,
@@ -52,6 +53,13 @@ export default {
       },
       deep: true, // 可以深度检测到 person 对象的属性值的变化
     },
+    list: {
+      handler(newVal, oldVal) {
+        this.init()
+        // newVal.forEach(item=>this.mountedList(item))
+      },
+      deep:true
+    },
   },
   methods: {
     create() {
@@ -59,19 +67,20 @@ export default {
     },
     move() {
       this.isDrag = true;
-      //  this.Drag(that)
     },
     init() {
-      // 创建svg画布、定义宽（700）高（700）
-      //   这个地方给svg增加一个 z-index:100, position:relative; 这样就可以这招在任何视频上了
+      // console.log(D3.select("#chartWrapId").remove())
+      // D3.select("#chartWrapId").remove()
+      console.log(document.getElementById('chartWrapId'));
+      setTimeout(()=>{
+        document.getElementById('chartWrapId')
+      },1000)
+      document.getElementById('chartWrapId').innerHTML = ''
+      // return
       const svg = D3.select("#chartWrapId")
         .append("svg")
         .attr("width", this.width)
         .attr("height", this.height);
-      // .style("z-index", 100)
-      // .style("position", "relative");
-
-      this.createDrag();
 
       svg
         .append("image")
@@ -79,16 +88,28 @@ export default {
         .attr("height", this.height)
         .attr("width", this.width)
         .attr("href", this.url);
-
+      svg.on("mouseleave", this.mouseLeaveInit); // 鼠标离开svg触发
+      svg.on("mouseenter", () => {
+        this.createCrossPoint(svg);
+      }); // 鼠标离开svg触发
       svg.on("mousemove", this.mouseMove); // 鼠标在svg上移动触发
-      svg.on("mouseleave", this.mouseLeave); // 鼠标离开svg触发
       svg.on("mousedown", this.mouseDown); // 鼠标按下触发
       svg.on("mouseup", this.mouseUp); // 鼠标抬起时触发
 
-      // 创建十字坐标
-      const positionXY = svg.append("g").attr("class", "line-g");
+      this.createContainer(svg);
+
+      this.list.forEach((item) => this.mountedList(item));
+      this.createDrag();
+    },
+    createContainer(svg) {
       svg.append("g").attr("id", "rect-g"); //用于存放矩形的容器
-      positionXY
+    },
+    // 创建十字坐标, 改成鼠标划入
+    createCrossPoint(svg, del) {
+      svg.attr("cursor", "crosshair");
+      /*        const positionXY = svg.append("g").attr("class", "line-g").attr('id','line-g');
+
+        positionXY
         .append("line")
         .attr("id", "line-x")
         .attr("x1", 0)
@@ -112,98 +133,165 @@ export default {
         .attr("cx", -10)
         .attr("cy", -10)
         .attr("r", 5)
-        .attr("fill", "red");
-        this.list.forEach(item=>this.mountedList(item))
+        .attr("fill", "red"); */
     },
-    mountedList(item){
-        // 这里创建做个函数,看下是否和down里一模一样,然后用函数处理创建
-        // 目前没有划入划出等事件
-        // let id = (new Date().getTime() * Math.random() * 1234).toFixed()
-        // let dom = `{rect-g-${id}-rect}`;
-        let that = this;
-          D3.select("#rect-g")
-          .append("g")
-          .attr("id", item.name)
-          .append("rect")
-          .attr("id", `rect-g-${item.name}-rect`)
-            .attr("x", item.startX)
-            .attr("y", item.startY)
-            .attr("width", Math.abs(item.width))
-            .attr("height", Math.abs(item.height))
-              .attr("stroke", "yellow")
-          .attr("fill", "yellow")
-          .attr("fill-opacity", 0.1)
-                 .on("mouseenter", function (e) {
-            let picRelationLeft = e.offsetX;
-            let picRelationTop = e.offsetY;
-            let isIn = that.isInMarkList(picRelationLeft, picRelationTop);
-            that.isDrag = isIn;
+    mountedList(item) {
+      let that = this;
+      D3.select("#rect-g")
+        .append("g")
+        .attr("id", `rect-g-${item.preId}`)
+        .append("rect")
+        .attr("id", `rect-g-${item.preId}-rect`)
+        .attr("x", item.startX)
+        .attr("y", item.startY)
+        .attr("width", Math.abs(item.width))
+        .attr("height", Math.abs(item.height))
+        .attr("stroke", "yellow")
+        .attr("fill", "yellow") // 矩形黄色
+        .attr("fill-opacity", 0.1)
+        .attr("cursor", "move")
+        .on("mouseenter", function (e) {
+          let picRelationLeft = e.offsetX;
+          let picRelationTop = e.offsetY;
+          let isIn = that.isInMarkList(picRelationLeft, picRelationTop);
+          that.isDrag = isIn;
 
-            if (that.isDrag) {
-              D3.select(this).attr("cursor", "pointer"); // 改变鼠标指针样式
-              const xy = [
-                +D3.select(this).attr("x"),
-                +D3.select(this).attr("y"),
-              ]; // 顶点坐标
-              const wh = [
-                +D3.select(this).attr("width"),
-                +D3.select(this).attr("height"),
-              ]; // 矩形宽高
-              const dots = [
-                xy,
-                [xy[0] + wh[0], xy[1]],
-                [xy[0] + wh[0], xy[1] + wh[1]],
-                [xy[0], xy[1] + wh[1]],
-              ]; // 得到四个圆点
-              const id = D3.select(this)._groups[0][0].parentNode.id; // 矩形父容器的id
-              D3.select(`#${id}`)
-                .selectAll("circle")
-                .data(dots)
-                .enter()
-                .append("circle")
-                .attr("cx", (d) => d[0])
-                .attr("cy", (d) => d[1])
-                .attr("r", 6)
-                .attr("fill", "yellow")
-                .attr("parent", id)
-                .on("mouseenter", function () {
-                  that.Drag(D3.select(this)); // 将圆添加到拖拽方法中
-                });
-              that.Drag(D3.select(this)); // 将矩形添加到拖拽方法中
-            }
-          })
-          .on("mouseout", function (e) {
-            let picRelationLeft = e.offsetX;
-            let picRelationTop = e.offsetY;
-            let isIn = that.isInMarkList(picRelationLeft, picRelationTop);
-            that.isDrag = isIn;
+          if (that.isDrag) {
+            D3.select(this).attr("cursor", "pointer"); // 改变鼠标指针样式
+            const xy = [+D3.select(this).attr("x"), +D3.select(this).attr("y")]; // 顶点坐标
+            const wh = [
+              +D3.select(this).attr("width"),
+              +D3.select(this).attr("height"),
+            ]; // 矩形宽高
+            const fourYelloDots = [
+              xy,
+              [xy[0] + wh[0], xy[1]],
+              [xy[0] + wh[0], xy[1] + wh[1]],
+              [xy[0], xy[1] + wh[1]],
+            ]; // 得到四个圆点
 
-            if (!that.isDrag) {
-              D3.select(this).attr("cursor", "auto"); // 改变鼠标指针样式
-              // D3.select(this).attr("cursor", "context-menu"); // 改变鼠标指针样式
-              let widget = D3.select(this).attr("fill", "lime");
-              let color = D3.select(this).attr("fill");
-              widget.attr("fill", color);
-              widget = null; // 被拖拽的元素设为空
-            }
-          })
-          .on("mouseleave", function (e) {
-            let picRelationLeft = e.offsetX;
-            let picRelationTop = e.offsetY;
-            let isIn = that.isInMarkList(picRelationLeft, picRelationTop);
-            that.isDrag = isIn;
+            //   挂载的元素,划入4个点
+            const id = D3.select(this)._groups[0][0].parentNode.id; // 矩形父容器的id
+            D3.select(`#${id}`)
+              .selectAll("circle")
+              .data(fourYelloDots)
+              .enter()
+              .append("circle")
+              .attr("cx", (d) => d[0])
+              .attr("cy", (d) => d[1])
+              .attr("r", 6)
+              .attr("fill", "yellow") // 矩形外的四个点的黄色
+              .attr("cursor", "move")
+              .attr("parent", id)
+              .on("mouseenter", function () {
+                that.Drag(D3.select(this)); // 将圆添加到拖拽方法中
+              });
+            that.Drag(D3.select(this)); // 将矩形添加到拖拽方法中
+          }
+        })
+        .on("mouseout", function (e) {
+          let picRelationLeft = e.offsetX;
+          let picRelationTop = e.offsetY;
+          let isIn = that.isInMarkList(picRelationLeft, picRelationTop);
+          that.isDrag = isIn;
 
-            if (!that.isDrag) {
-              D3.select(this).attr("cursor", "auto"); // 改变鼠标指针样式
-              // D3.select(this).attr("cursor", "context-menu"); // 改变鼠标指针样式
-              let widget = D3.select(this).attr("fill", "lime");
-              let color = D3.select(this).attr("fill");
-              widget.attr("fill", color);
-              widget = null; // 被拖拽的元素设为空
-            }
-          });
+          if (!that.isDrag) {
+            D3.select(this).attr("cursor", "auto"); // 改变鼠标指针样式
+            // D3.select(this).attr("cursor", "context-menu"); // 改变鼠标指针样式
+            let widget = D3.select(this).attr("fill", "lime");
+            let color = D3.select(this).attr("fill");
+            widget.attr("fill", color);
+            widget = null; // 被拖拽的元素设为空
+          }
+        })
+        .on("mouseleave", function (e) {
+          let picRelationLeft = e.offsetX;
+          let picRelationTop = e.offsetY;
+          let isIn = that.isInMarkList(picRelationLeft, picRelationTop);
+          that.isDrag = isIn;
 
-    },  
+          if (!that.isDrag) {
+            D3.select(this).attr("cursor", "auto"); // 改变鼠标指针样式
+            // D3.select(this).attr("cursor", "context-menu"); // 改变鼠标指针样式
+            let widget = D3.select(this).attr("fill", "lime");
+            let color = D3.select(this).attr("fill");
+            widget.attr("fill", color);
+            widget = null; // 被拖拽的元素设为空
+
+            console.log(111,'删除')
+            D3.select(`#rect-g-${item.preId}`).selectAll("circle").remove(); // 删除四个球
+          }
+        });
+
+      const xy = [
+        +D3.select(`#rect-g-${item.preId}-rect`).attr("x"),
+        +D3.select(`#rect-g-${item.preId}-rect`).attr("y"),
+      ]; // 顶点坐标
+      console.log(xy);
+      const wh = [
+        +D3.select(`#rect-g-${item.preId}-rect`).attr("width"),
+        +D3.select(`#rect-g-${item.preId}-rect`).attr("height"),
+      ]; // 矩形宽高
+      const { startX, endX, startY, endY, startX2, endX2, startY2, endY2 } = {
+        startX: xy[0] + wh[0] - 20,
+        startY: xy[1] + 10,
+        endX: xy[0] + wh[0] - 10,
+        endY: xy[1] + 20,
+
+        startX2: xy[0] + wh[0] - 10,
+        startY2: xy[1] + 10,
+        endX2: xy[0] + wh[0] - 20,
+        endY2: xy[1] + 20,
+      };
+
+      let delCon = D3.select(`#rect-g-${item.preId}`)
+        .append("g")
+
+        .attr("id", `#rect-g-${item.preId}-delCon`)
+        .attr("idParent", `${item.preId}`)
+        .attr("cursor", "context-menu")
+        .attr("fill", "transparent");
+
+      // .attr('width',`${wh[0]}`)
+      // .attr('height',`${wh[1]}`)
+
+      delCon
+        .append("line")
+        .attr("id", 111)
+        .attr("x1", `${startX}`)
+        .attr("y1", `${startY}`)
+        .attr("x2", `${endX}`)
+        .attr("y2", `${endY}`)
+        .attr("stroke", `steelblue`)
+        .attr("fill", `transparent`)
+        .attr("stroke-width", `2`)
+        .attr("cursor", `context-menu`);
+
+      delCon
+        .append("line")
+        .attr("id", 222)
+        .attr("x1", `${startX2}`)
+        .attr("y1", `${startY2}`)
+        .attr("x2", `${endX2}`)
+        .attr("y2", `${endY2}`)
+        .attr("stroke", `steelblue`)
+        .attr("stroke-width", `2`)
+        .attr("cursor", `context-menu`);
+      //    .attr('width',`${wh[0]}`)
+      // .attr('height',`${wh[1]}`)
+
+      delCon.on("click", function (e) {
+        console.log(e);
+        const xy = [
+          +D3.select(`#rect-g-${item.preId}-rect`).attr("x"),
+          +D3.select(`#rect-g-${item.preId}-rect`).attr("y"),
+        ];
+        console.log(xy);
+        alert(
+          `发送请求,组件往出派发事件即可,xy点位点: ${xy},宽高: ${wh},id: ${item.preId}`
+        );
+      });
+    },
 
     GetCross(p1, p2, p) {
       return (p2.x - p1.x) * (p.y - p1.y) - (p.x - p1.x) * (p2.y - p1.y);
@@ -228,25 +316,10 @@ export default {
           }
         );
       });
+      // console.log(!!(res && res.length));
       return !!(res && res.length);
     },
-    /*   isInArea(item,x,y){
-        // x是当前点
-        // y是当前点
-        // x >= item.startX && x <=item.endX &&
-        // y <= item.startY && y >= item.endY
-        return (x >= item.startX - item.width /2) &&
-                (x <= item.startX + item.width /2) &&
-                (y >= item.startY - item.height /2) &&
-                (y <= item.startY + item.height /2);
-    },
 
-    isInMarkList(x,y){
-        let res =   this.list.filter(item=>{
-            return this.isInArea(item,x,y)
-        })
-        return !!(res&& res.length)
-    }, */
     mouseDown(e) {
       let picRelationLeft = e.offsetX;
       let picRelationTop = e.offsetY;
@@ -265,9 +338,10 @@ export default {
           .attr("id", `rect-g-${id}-rect`)
           .attr("x", xy[0])
           .attr("y", xy[1])
-          .attr("stroke", "yellow")
+          .attr("stroke", "yellow") //  点下鼠标, 再次创建矩形
           .attr("fill", "yellow")
           .attr("fill-opacity", 0.1)
+          .attr("cursor", "move")
           .on("mouseenter", function () {
             let picRelationLeft = e.offsetX;
             let picRelationTop = e.offsetY;
@@ -284,7 +358,7 @@ export default {
                 +D3.select(this).attr("width"),
                 +D3.select(this).attr("height"),
               ]; // 矩形宽高
-              const dots = [
+              const fourYelloDots = [
                 xy,
                 [xy[0] + wh[0], xy[1]],
                 [xy[0] + wh[0], xy[1] + wh[1]],
@@ -293,13 +367,14 @@ export default {
               const id = D3.select(this)._groups[0][0].parentNode.id; // 矩形父容器的id
               D3.select(`#${id}`)
                 .selectAll("circle")
-                .data(dots)
+                .data(fourYelloDots)
                 .enter()
                 .append("circle")
                 .attr("cx", (d) => d[0])
                 .attr("cy", (d) => d[1])
                 .attr("r", 6)
                 .attr("fill", "yellow")
+                .attr("cursor", "move")
                 .attr("parent", id)
                 .on("mouseenter", function () {
                   that.Drag(D3.select(this)); // 将圆添加到拖拽方法中
@@ -351,7 +426,7 @@ export default {
       let isIn = this.isInMarkList(picRelationLeft, picRelationTop);
       this.isDrag = isIn;
 
-    //   初始化触发移动事件的部分逻辑,直接把线画出来. 或者在初始化的时候把这些逻辑写出来
+      //   初始化触发移动事件的部分逻辑,直接把线画出来. 或者在初始化的时候把这些逻辑写出来
       let that = this;
       if (!this.isDrag) {
         //判断不是在拖拽状态下
@@ -407,6 +482,10 @@ export default {
       } else {
       }
     },
+    mouseLeaveInit(e) {
+      D3.select("#line-g").remove();
+      this.mouseUp(e); // 离开触发一次抬起事件
+    },
     mouseUp(e) {
       let picRelationLeft = e.offsetX;
       let picRelationTop = e.offsetY;
@@ -414,27 +493,67 @@ export default {
       this.isDrag = isIn;
       if (!this.isDrag) {
         // 不是拖拽,那么就是新的数据
-        let width = +D3.select(`#${this.startDom}`)
-          .style("width")
-          .split("px")[0];
-        let height = +D3.select(`#${this.startDom}`)
-          .style("height")
-          .split("px")[0];
-        this.list.push({
-          // 新增
-          name: this.startDom,
-          startX: this.rectData[0],
-          startY: this.rectData[1],
-          endX: this.rectData[0] + width,
-          endY: this.rectData[1] + height,
-          width: width,
-          height: height,
-        });
+        if (this.startDom) {
+          let width = +D3.select(`#${this.startDom}`)
+            .style("width")
+            .split("px")[0];
+          let height = +D3.select(`#${this.startDom}`)
+            .style("height")
+            .split("px")[0];
+            console.log(this.startDom)
+          this.list.push({
+            // 新增
+            name: this.startDom,
+            preId: this.startDom.replace(/\D/g,'').replace('-',''),
+            startX: this.rectData[0],
+            startY: this.rectData[1],
+            endX: this.rectData[0] + width,
+            endY: this.rectData[1] + height,
+            width: width,
+            height: height,
+          });
+
+        }
 
         // 判断不是在拖拽状态
         this.start = false; // 添加矩形动作取消
         this.startDom = ""; //
         this.rectData = []; // 参考mousedown
+      }
+    },
+    updateDelPoint(xy, wh, that) {
+      const { startX, endX, startY, endY, startX2, endX2, startY2, endY2 } = {
+        startX: xy[0] + wh[0] - 20,
+        startY: xy[1] + 10,
+        endX: xy[0] + wh[0] - 10,
+        endY: xy[1] + 20,
+
+        startX2: xy[0] + wh[0] - 10,
+        startY2: xy[1] + 10,
+        endX2: xy[0] + wh[0] - 20,
+        endY2: xy[1] + 20,
+      };
+      // console.log(xy,'xy定位点')
+      // console.log(wh,'wh宽高')
+      // console.log(startX, startY,'第一个点左上角')
+      // console.log(endX, endY,'第一个点右下角')
+      // console.log(startX2, startY2,'第二个点左上角')
+      // console.log(endX2, endY2,'第二个点右下角')
+
+      console.log(that);
+      console.log(that.id);
+      if (that.id === "111") {
+        D3.select(that)
+          .attr("x1", `${startX}`)
+          .attr("y1", `${startY}`)
+          .attr("x2", `${endX}`)
+          .attr("y2", `${endY}`);
+      } else if (that.id === "222") {
+        D3.select(that)
+          .attr("x1", `${startX2}`)
+          .attr("y1", `${startY2}`)
+          .attr("x2", `${endX2}`)
+          .attr("y2", `${endY2}`);
       }
     },
     createDrag() {
@@ -447,6 +566,7 @@ export default {
           widget = D3.select(this).attr("fill", "lime");
           const dot = [+e.sourceEvent.offsetX, +e.sourceEvent.offsetY]; // 实时记录点的坐标
           const id = widget._groups[0][0].parentNode.id; // 获取父元素的id
+
           if (widget._groups[0][0].localName === "rect") {
             // 当拖拽对象为矩形
             widget
@@ -462,10 +582,10 @@ export default {
                 D3.select(this).attr("o-x", origin[0]).attr("o-y", origin[1]);
               });
           }
-          console.log(id)
           // 当拖拽对象为圆形
           if (widget._groups[0][0].localName === "circle") {
             // 获取矩形的一些信息， x, y, width, height
+
             const cxy = [
               +D3.select(`#${id}-rect`).attr("x"),
               +D3.select(`#${id}-rect`).attr("y"),
@@ -498,10 +618,12 @@ export default {
         })
         .on("drag", function (e) {
           // 拖拽过程中触发
-          const dot = [+e.sourceEvent.offsetX, +e.sourceEvent.offsetY]; // 实时记录点的坐标
+          const dot = [+e.sourceEvent.offsetX, +e.sourceEvent.offsetY]; // 实时记录鼠标点的坐标
           if (widget._groups[0][0].localName === "rect") {
             // 拖拽对象为矩形
             const id = widget._groups[0][0].parentNode.id; // 获取父元素的id
+            // consle.log
+            // debugger
             widget
               .attr("x", dot[0] - +widget.attr("o-x"))
               .attr("y", dot[1] - +widget.attr("o-y")); // 更新矩形的顶点信息
@@ -512,9 +634,26 @@ export default {
                   .attr("cx", dot[0] - +D3.select(this).attr("o-x"))
                   .attr("cy", dot[1] - +D3.select(this).attr("o-y"));
               });
+
+            const xy = [Number(widget.attr("x")), Number(widget.attr("y"))]; // 顶点坐标
+            console.log(xy);
+            const wh = [
+              Number(D3.select(this).attr("width")),
+              Number(D3.select(this).attr("height")),
+            ];
+            D3.select(`#${id}`)
+              .selectAll("line")
+              .each(function () {
+                let line = D3.select(this)["_groups"][0][0];
+                if (line.id === "111") {
+                  that.updateDelPoint(xy, wh, this);
+                } else if (line.id === "222") {
+                  that.updateDelPoint(xy, wh, this);
+                }
+              });
           }
+
           if (widget._groups[0][0].localName === "circle") {
-            // 拖拽对象为矩形
             // 判断新的点相对于原顶点的位置信息，获取新的顶点坐标
             let top;
             if (dot[0] >= that.topDot[0]) {
@@ -562,12 +701,108 @@ export default {
               .attr("cx", (d) => d[0])
               .attr("cy", (d) => d[1])
               .attr("r", 6)
-              .attr("fill", "yellow")
+              .attr("fill", "yellow") // 拖拽过程中,对4个点位置进行修改
+              .attr("cursor", "move")
               .attr("parent", id)
               .on("mouseenter", function () {
                 that.Drag(D3.select(this));
               });
+
+              // 圆拖拽部分,处理x
+            const xy = [+top[0], +top[1]]; // 顶点坐标
+            console.log(xy);
+            const wh = [
+              Math.abs(that.topDot[0] - dot[0]), // width
+              Math.abs(dot[1] - that.topDot[1]) // height
+              // Number(D3.select(this).attr("width")),
+              // Number(D3.select(this).attr("height")),
+            ];
+            D3.select(`#${id}`)
+              .selectAll("line")
+              .each(function () {
+                let line = D3.select(this)["_groups"][0][0];
+                if (line.id === "111") {
+                  that.updateDelPoint(xy, wh, this);
+                } else if (line.id === "222") {
+                  that.updateDelPoint(xy, wh, this);
+                }
+              });
+
+
           }
+
+          /*        // 不管什么拖拽都需要修改x的位置
+        const xy = [
+          +dot[0],
+          +dot[1],
+        ]; // 顶点坐标
+
+        const wh = [
+          Number(D3.select(this).attr('width')),
+          Number(D3.select(this).attr('height'))
+        ]; // 矩形宽高
+
+
+        const { startX, endX, startY, endY, startX2,endX2, startY2 , endY2} = {
+          startX: xy[0] + wh[0] - 20,
+          startY: xy[1] + 10,
+          endX: xy[0] + wh[0] - 10,
+          endY: xy[1] + 20,
+
+          startX2: xy[0] + wh[0] - 10,
+          startY2: xy[1] + 10,
+          endX2: xy[0] + wh[0] - 20,
+          endY2: xy[1] + 20,
+        };
+        // console.log(xy);
+        // console.log(wh);
+        // console.log(startX, endX, startY, endY, startX2,endX2, startY2 , endY2);
+         const id = widget._groups[0][0].parentNode.id; // 获取父元素的id
+        console.log(id);
+     
+         
+         console.log(D3.select(id));
+         console.log(id.slice(7))
+      let delCon =     D3.select(id)
+          .append("g")
+          
+          .attr("id",`${id}-delCon`)
+          .attr('idParent',`${id.slice(7)}`)
+          .attr('cursor','context-menu')
+          .attr('fill','transparent')
+
+          delCon.append("line")
+          .attr('id',111)
+          .attr("x1", `${startX}`)
+          .attr("y1", `${startY}`)
+          .attr("x2", `${endX}`)
+          .attr("y2", `${endY}`)
+          .attr("stroke", `steelblue`)
+          .attr("fill", `transparent`)
+          .attr("stroke-width", `2`)
+          .attr("cursor", `context-menu`)
+     
+          
+
+        delCon
+          .append("line")
+          .attr("id", 222)
+          .attr("x1", `${startX2}`)
+          .attr("y1", `${startY2}`)
+          .attr("x2", `${endX2}`)
+          .attr("y2", `${endY2}`)
+          .attr("stroke", `steelblue`)
+          .attr("stroke-width", `2`)
+          .attr("cursor", `context-menu`)
+          //    .attr('width',`${wh[0]}`)
+          // .attr('height',`${wh[1]}`)
+
+          delCon.on('click',function(e){
+            console.log(e)
+            alert(`发送请求,组件往出派发事件即可,xy点位点: ${
+              xy},宽高: ${wh},id: ${item.preId}`)
+
+          }) */
         })
         .on("end", function (e) {
           widget.attr("fill", color);

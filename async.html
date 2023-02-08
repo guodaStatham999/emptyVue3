@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script>
+        // 结果
+        // 微任务 0 1 a 2 3 4 5
+        Promise.resolve().then(() => {
+            console.log(0)
+            return Promise.resolve('a') // then返回一个Promise, 就是.then源码里返回的x. 会再创建一个promise来等待. 这里就是一个x.then()
+        }).then(res => { // 这里是第二个.then
+            console.log(res);
+        })
+
+        Promise.resolve().then(() => {
+            console.log(1)
+        }).then(() => {
+            console.log(2)
+        }).then(() => {
+            console.log(3)
+        }).then(() => {
+            console.log(4)
+        }).then(() => {
+            console.log( 5)
+        })
+
+        
+    </script>
+</body>
+
+</html>
