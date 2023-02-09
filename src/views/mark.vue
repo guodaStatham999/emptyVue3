@@ -265,8 +265,18 @@ export default {
         .attr("id", `rect-g-${item.preId}`)
         .append("rect")
         .attr("id", `rect-g-${item.preId}-rect`)
-        .attr("x", item.startX)
-        .attr("y", item.startY)
+        .attr(
+          "x",
+          this.dimension.scale == 1
+            ? item.startX
+            : item.startX + this.dimension.margin.left
+        )
+        .attr(
+          "y",
+          this.dimension.scale == 1
+            ? item.startY
+            : item.startY + this.dimension.margin.top
+        )
         .attr("width", Math.abs(item.width))
         .attr("height", Math.abs(item.height))
         .attr("stroke", "yellow")
@@ -435,28 +445,43 @@ export default {
     isInMarkList(x, y) {
       // 已经加上了左侧和上侧的偏移量
       let res = this.list.filter((item) => {
-        return this.IsPointInMatrix(
-          { x: item.startX, y: item.startY },
-          { x: item.endX, y: item.startY },
-          { x: item.endX, y: item.endY },
-          { x: item.startX, y: item.endY },
-          {
-            x,
-            y,
-          }
-        );
-        // return this.IsPointInMatrix(
-        //   { x: item.startX + this.dimension.margin.left, y: item.startY  + this.dimension.margin.top},
-        //   { x: item.endX + this.dimension.margin.left, y: item.startY+ this.dimension.margin.top },
-        //   { x: item.endX + this.dimension.margin.left, y: item.endY + this.dimension.margin.top},
-        //   { x: item.startX + this.dimension.margin.left, y: item.endY + this.dimension.margin.top},
-        //   {
-        //     x,
-        //     y,
-        //   }
-        // );
+        if (this.dimension.scale == 1) {
+          return this.IsPointInMatrix(
+            { x: item.startX, y: item.startY },
+            { x: item.endX, y: item.startY },
+            { x: item.endX, y: item.endY },
+            { x: item.startX, y: item.endY },
+            {
+              x,
+              y,
+            }
+          );
+        } else {
+          return this.IsPointInMatrix(
+            {
+              x: item.startX + this.dimension.margin.left,
+              y: item.startY + this.dimension.margin.top,
+            },
+            {
+              x: item.endX + this.dimension.margin.left,
+              y: item.startY + this.dimension.margin.top,
+            },
+            {
+              x: item.endX + this.dimension.margin.left,
+              y: item.endY + this.dimension.margin.top,
+            },
+            {
+              x: item.startX + this.dimension.margin.left,
+              y: item.endY + this.dimension.margin.top,
+            },
+            {
+              x,
+              y,
+            }
+          );
+        }
       });
-      // console.log(x,y,'xy');
+      // console.log(x, y, "xy");
       // console.log(!!(res && res.length));
       return !!(res && res.length);
     },
@@ -719,7 +744,6 @@ export default {
           // 当拖拽对象为圆形
           if (widget._groups[0][0].localName === "circle") {
             // 获取矩形的一些信息， x, y, width, height
-
             const cxy = [
               +D3.select(`#${id}-rect`).attr("x"),
               +D3.select(`#${id}-rect`).attr("y"),
@@ -807,6 +831,7 @@ export default {
               }
             }
             const id = widget.attr("parent"); // 获取父元素的id
+            console.log(id)
             // 更新矩形的信息
             D3.select(`#${id}-rect`)
               .attr("x", top[0])
@@ -863,20 +888,22 @@ export default {
         })
         .on("end", function (e) {
           console.log(e);
-
-          const dot = [+e.sourceEvent.offsetX, +e.sourceEvent.offsetY];
-          const id = widget._groups[0][0].parentNode.id
-            ?.replace(/\D/g, "")
-            .replace("-", "");
+          // 目前最后一个bug, 就是四个点拖拽结束,只是到最后一个点. 然后回想是 忘记重新计算大小了... 在计算位置的时候直接使用原来值的宽高
+          const dot = that.dimension.scale == 1?[+e.sourceEvent.offsetX, +e.sourceEvent.offsetY]:[+e.sourceEvent.offsetX - that.dimension.margin.left, +e.sourceEvent.offsetY - that.dimension.margin.top]
+          let changeNode = null
+          console.log( widget.attr("o-x"));
+          console.log( widget._groups[0][0]?.getAttribute('parent'));
+          const id = (widget._groups[0][0]?.parentNode?.id || ( widget._groups[0][0]?.getAttribute('parent')))?.replace(/\D/g, "").replace("-", "")
           for (let i = 0; i < that.list.length; i++) {
             let l = that.list[i];
             if (l.preId == id) {
+              changeNode = l
+              that.list[i].startX = dot[0] - +widget.attr("o-x");
+              that.list[i].startY = dot[1] - +widget.attr("o-y");
               that.list[i].endX =
                 dot[0] - +widget.attr("o-x") + that.list[i].width;
               that.list[i].endY =
                 dot[1] - +widget.attr("o-y") + that.list[i].height;
-              that.list[i].startX = dot[0] - +widget.attr("o-x");
-              that.list[i].startY = dot[1] - +widget.attr("o-y");
 
               break;
             }
@@ -885,7 +912,9 @@ export default {
 
           widget.attr("fill", color);
           widget = null; // 被拖拽的元素设为空
-          that.init();
+          // that.init();
+          that.$emit('emitList',that.list)
+          that.$emit('emitNode',changeNode)
         });
     },
     isNil(val) {
