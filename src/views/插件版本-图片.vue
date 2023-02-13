@@ -6,24 +6,30 @@
     class="chartWrap"
     :dimension="dimension"
   >
-    <video id="videoRef" v-if="baseOptions.url"  controls>
-      <source :src="baseOptions.url" type="video/mp4" />
-      您的浏览器不支持 HTML5 video 标签。
-    </video>
-    <svg id="svgId"  class="svgCon" :width="1700" :height="900">
-
+    <svg id="svgId" :width="dimension.svg.width" :height="dimension.svg.height">
+      <image
+        :width="dimension.svg.width"
+        :height="dimension.svg.height"
+        :href="url"
+        class="control-img"
+      />
     </svg>
   </div>
-
+  <!-- <button @click="create">创建</button>
+  <button @click="move">移动</button> -->
 </template>
 
 
 <script>
 import * as D3 from "d3";
+// 先测试是否可以直接迁移到某个位置, 直接在b端处理.
+// 点击移动以后,再次点击创建. 没法再已标注上面继续标注了.
+// 而且移动后,应该删除两个点 或者让他俩隐藏..
 export default {
   props: ["baseOptions"],
   data() {
     return {
+      // 图片宽高,是否加载完成,地址
       loaded: false,
       width: 0,
       height: 0,
@@ -34,29 +40,29 @@ export default {
       start: false,
       startDom: "",
       Drag: null,
-      list:[]
-      // list: [
-      //   // {
-      //   //   endX: 50,
-      //   //   endY: 50,
-      //   //   height: 50,
-      //   //   name: "rect-g-1675329600098",
-      //   //   preId: "1675329600098",
-      //   //   startX: 0,
-      //   //   startY: 0,
-      //   //   width: 50,
-      //   // },
-      //   // {
-      //   //   endX: 334,
-      //   //   endY: 156,
-      //   //   height: 54,
-      //   //   name: "rect-g-1675329600099",
-      //   //   preId: "1675329600099",
-      //   //   startX: 138,
-      //   //   startY: 102,
-      //   //   width: 196,
-      //   // },
-      // ],
+
+      list: [
+        {
+          endX: 50,
+          endY: 50,
+          height: 50,
+          name: "rect-g-1675329600098",
+          preId: "1675329600098",
+          startX: 0,
+          startY: 0,
+          width: 50,
+        },
+        {
+          endX: 334,
+          endY: 156,
+          height: 54,
+          name: "rect-g-1675329600099",
+          preId: "1675329600099",
+          startX: 138,
+          startY: 102,
+          width: 196,
+        },
+      ],
     };
   },
   // 等比例缩放
@@ -74,7 +80,8 @@ export default {
       // 当 dom 元素加载完毕来计算 svg 尺寸
       if (
         !this.isNil(this.bounding) &&
-        !!this.loaded 
+        !!this.loaded &&
+        this.$refs.chartWrapRef
       ) {
         let imgInfo = {
           width: this.width,
@@ -171,31 +178,24 @@ export default {
       return defaultDimension;
     },
   },
-  // created
-
 
   watch: {
     "baseOptions.url": {
       handler(newVal, oldVal) {
-        this.$nextTick(()=>this.loaded=true)
-        // console.log(this.$refs.videoRef);
-        
-        // let img = new Image();
-        // img.onload = () => {
-        //   this.loaded = true;
-        //   this.width = img.width + "";
-        //   this.height = img.height + "";
-        //   this.url = newVal;
-        //   this.init();
-        // };
-        // img.src = newVal;
+        let img = new Image();
+        img.onload = () => {
+          this.loaded = true;
+          this.width = img.width + "";
+          this.height = img.height + "";
+          this.url = newVal;
+          this.init();
+        };
+        img.src = newVal;
       },
       deep: true, // 可以深度检测到 person 对象的属性值的变化
     },
-    'baseOptions.list': {
+    list: {
       handler(newVal, oldVal) {
-        console.log(newVal);
-        this.list = newVal
         this.init();
       },
       deep: true,
@@ -206,8 +206,6 @@ export default {
   },
   methods: {
     init() {
-      console.log(this.list)
-
       D3.select("#rect-g").remove();
       // return
       const svg = D3.select("#svgId");
@@ -427,7 +425,7 @@ export default {
         alert(
           `发送请求,组件往出派发事件即可,xy点位点: ${xy},宽高: ${wh},id: ${item.preId}`
         );
-        that.list = that.list.filter((l) => {
+        that.list =  that.list.filter((l) => {
           return l.preId !== item.preId;
         });
       });
@@ -488,6 +486,7 @@ export default {
     },
 
     mouseDown(e) {
+
       let picRelationLeft = e.offsetX;
       let picRelationTop = e.offsetY;
       let isIn = this.isInMarkList(picRelationLeft, picRelationTop);
@@ -663,7 +662,7 @@ export default {
       this.isDrag = isIn;
       if (!this.isDrag) {
         // 不是拖拽,那么就是新的数据
-        console.log(this.startDom);
+      console.log(this.startDom);
 
         if (this.startDom) {
           let width = +D3.select(`#${this.startDom}`)
@@ -672,24 +671,24 @@ export default {
           let height = +D3.select(`#${this.startDom}`)
             .style("height")
             .split("px")[0];
-          console.log(width);
-          console.log(height);
-          console.log(this.list);
-          let PreId = this.startDom.replace(/\D/g, "").replace("-", "");
-          if (this.dimension.scale == 1) {
+            console.log(width);
+            console.log(height);
+            console.log(this.list);
+            let PreId = this.startDom.replace(/\D/g, "").replace("-", "")
+            if(this.dimension.scale == 1){
             this.list.push({
-              // 新增
-              name: `rect-g-${PreId}`,
-              preId: PreId,
-              startX: this.rectData[0],
-              startY: this.rectData[1],
-              endX: this.rectData[0] + width,
-              endY: this.rectData[1] + height,
-              width: width,
-              height: height,
-            });
-          } else {
-            this.list.push({
+                // 新增
+                name: `rect-g-${PreId}`,
+                preId: PreId,
+                startX: this.rectData[0] ,
+                startY: this.rectData[1] ,
+                endX: this.rectData[0] + width ,
+                endY: this.rectData[1] + height ,
+                width: width,
+                height: height,
+              });
+            }else{
+                 this.list.push({
               // 新增
               name: `rect-g-${PreId}`,
               preId: PreId,
@@ -699,10 +698,11 @@ export default {
               endY: this.rectData[1] + height - this.dimension.margin.top,
               width: width,
               height: height,
-            });
-          }
+          });
+            }
+       
+            console.log(this.list);
 
-          console.log(this.list);
         }
 
         // 判断不是在拖拽状态
@@ -740,7 +740,7 @@ export default {
     createDrag() {
       let color, widget;
       const that = this;
-      let isRectOrcircle = {};
+      let isRectOrcircle = {}
       this.Drag = D3.drag() // 创建D3内置函数
         .on("start", function (e) {
           // 开始拖拽那刻触发
@@ -804,8 +804,8 @@ export default {
             // 拖拽对象为矩形
             const id = widget._groups[0][0].parentNode.id; // 获取父元素的id
             isRectOrcircle = {
-              isRect: true,
-            };
+              isRect :true
+            }
             // o-x 只有这里和拖拽点用到了,还是用来更新4个黄色点的
             widget
               .attr("x", dot[0] - +widget.attr("o-x")) // 减去前面存储的间距,就是左上角
@@ -836,6 +836,7 @@ export default {
           }
 
           if (widget._groups[0][0].localName === "circle") {
+            
             // 判断新的点相对于原顶点的位置信息，获取新的顶点坐标
             let top;
             if (dot[0] >= that.topDot[0]) {
@@ -858,9 +859,9 @@ export default {
             isRectOrcircle = {
               isRect: false,
               top,
-              width: Math.abs(that.topDot[0] - dot[0]),
-              height: Math.abs(dot[1] - that.topDot[1]),
-            };
+              width:Math.abs(that.topDot[0] - dot[0]),
+              height:Math.abs(dot[1] - that.topDot[1])
+            }
             const id = widget.attr("parent"); // 获取父元素的id
             // 更新矩形的信息
             D3.select(`#${id}-rect`)
@@ -917,77 +918,58 @@ export default {
           }
         })
         .on("end", function (e) {
-          let changeNode = null;
+          let changeNode = null
           // 目前最后一个bug, 就是四个点拖拽结束,只是到最后一个点. 然后回想是 忘记重新计算大小了... 在计算位置的时候直接使用原来值的宽高
-          if (isRectOrcircle.isRect) {
-            const dot =
-              that.dimension.scale == 1
-                ? [+e.sourceEvent.offsetX, +e.sourceEvent.offsetY]
-                : [
-                    +e.sourceEvent.offsetX - that.dimension.margin.left,
-                    +e.sourceEvent.offsetY - that.dimension.margin.top,
-                  ];
-            const id = (
-              widget._groups[0][0]?.parentNode?.id ||
-              widget._groups[0][0]?.getAttribute("parent")
-            )
-              ?.replace(/\D/g, "")
-              .replace("-", "");
-            for (let i = 0; i < that.list.length; i++) {
-              let l = that.list[i];
-              if (l.preId == id) {
-                changeNode = l;
-                that.list[i].startX = dot[0] - +widget.attr("o-x");
-                that.list[i].startY = dot[1] - +widget.attr("o-y");
-                that.list[i].endX =
-                  dot[0] - +widget.attr("o-x") + that.list[i].width;
-                that.list[i].endY =
-                  dot[1] - +widget.attr("o-y") + that.list[i].height;
+         if(isRectOrcircle.isRect){
+           const dot = that.dimension.scale == 1?[+e.sourceEvent.offsetX, +e.sourceEvent.offsetY]:[+e.sourceEvent.offsetX - that.dimension.margin.left, +e.sourceEvent.offsetY - that.dimension.margin.top]
+          const id = (widget._groups[0][0]?.parentNode?.id || ( widget._groups[0][0]?.getAttribute('parent')))?.replace(/\D/g, "").replace("-", "")
+          for (let i = 0; i < that.list.length; i++) {
+            let l = that.list[i];
+            if (l.preId == id) {
+              changeNode = l
+              that.list[i].startX = dot[0] - +widget.attr("o-x");
+              that.list[i].startY = dot[1] - +widget.attr("o-y");
+              that.list[i].endX =
+                dot[0] - +widget.attr("o-x") + that.list[i].width;
+              that.list[i].endY =
+                dot[1] - +widget.attr("o-y") + that.list[i].height;
 
-                break;
-              }
-            }
-          } else if (isRectOrcircle.isRect === false) {
-            // 拖拽4个点,看下如何计算. 感觉就是width需要开始和结束点计算.
-            // 在drag的circle里留下这些信息
-            const dot =
-              that.dimension.scale == 1
-                ? [isRectOrcircle.top[0], isRectOrcircle.top[1]]
-                : [
-                    isRectOrcircle.top[0] - that.dimension.margin.left,
-                    isRectOrcircle.top[1] - that.dimension.margin.top,
-                  ];
-            // const dot = isRectOrcircle.top;
-            const id = (
-              widget._groups[0][0]?.parentNode?.id ||
-              widget._groups[0][0]?.getAttribute("parent")
-            )
-              ?.replace(/\D/g, "")
-              .replace("-", "");
-            for (let i = 0; i < that.list.length; i++) {
-              let l = that.list[i];
-              if (l.preId == id) {
-                changeNode = l;
-                that.list[i].startX = dot[0];
-                that.list[i].startY = dot[1];
-                // that.list[i].startX = dot[0] - +widget.attr("o-x");
-                // that.list[i].startY = dot[1] - +widget.attr("o-y");
-                that.list[i].endX = dot[0] + isRectOrcircle.width;
-                that.list[i].endY = dot[1] + isRectOrcircle.height;
-                that.list[i].width = isRectOrcircle.width;
-                that.list[i].height = isRectOrcircle.height;
-
-                break;
-              }
+              break;
             }
           }
-          Promise.resolve().then(() => (isRectOrcircle = {}));
+         }else if(isRectOrcircle.isRect === false){
+            // 拖拽4个点,看下如何计算. 感觉就是width需要开始和结束点计算.
+            // 在drag的circle里留下这些信息
+            const dot = that.dimension.scale == 1?[isRectOrcircle.top[0], isRectOrcircle.top[1]]:[isRectOrcircle.top[0] - that.dimension.margin.left, isRectOrcircle.top[1] - that.dimension.margin.top]
+            // const dot = isRectOrcircle.top;
+            const id = (widget._groups[0][0]?.parentNode?.id || ( widget._groups[0][0]?.getAttribute('parent')))?.replace(/\D/g, "").replace("-", "")
+            for (let i = 0; i < that.list.length; i++) {
+              let l = that.list[i];
+              if (l.preId == id) {
+                changeNode = l
+                that.list[i].startX = dot[0] ;
+                that.list[i].startY = dot[1] ;
+                // that.list[i].startX = dot[0] - +widget.attr("o-x");
+                // that.list[i].startY = dot[1] - +widget.attr("o-y");
+                that.list[i].endX =
+                  dot[0]  + isRectOrcircle.width;
+                that.list[i].endY =
+                  dot[1]  + isRectOrcircle.height;
+                  that.list[i].width = isRectOrcircle.width;
+                  that.list[i].height = isRectOrcircle.height;
+
+                break;
+              }
+            }
+
+         }
+         Promise.resolve().then(()=>isRectOrcircle = {})
 
           widget.attr("fill", color);
           widget = null; // 被拖拽的元素设为空
           // that.init();
-          that.$emit("emitList", that.list);
-          that.$emit("emitNode", changeNode);
+          that.$emit('emitList',that.list)
+          that.$emit('emitNode',changeNode)
         });
     },
     isNil(val) {
@@ -1020,11 +1002,5 @@ body {
   min-height: 100%;
   width: 100%;
   position: relative;
-}
-.svgCon{
-  position: absolute;
-    left: 0;
-    top: 0;
-    z-index: 1;
 }
 </style>
