@@ -30,6 +30,7 @@
     "vue": "^3.2.13",
     "vue-fabric": "^0.1.42",
     "vue-router": "^4.0.3",
+    "vue-waterfall-plugin-next": "^2.1.11",
     "vuejs-progress-bar": "^1.2.8",
     "vuex": "^4.0.0"
   },

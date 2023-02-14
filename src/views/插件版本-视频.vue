@@ -19,6 +19,8 @@
 
 
 <script>
+// https://gitee.com/fuwenwei501/ailabel-me#http://fuwenwei501.gitee.io/ailabel-me
+// 感觉写的不错
 import * as D3 from "d3";
 export default {
   props: ["baseOptions"],

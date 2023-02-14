@@ -21,10 +21,10 @@
 
 
 <script>
+// https://gitee.com/fuwenwei501/ailabel-me#http://fuwenwei501.gitee.io/ailabel-me
+// 感觉写的不错
 import * as D3 from "d3";
-// 先测试是否可以直接迁移到某个位置, 直接在b端处理.
-// 点击移动以后,再次点击创建. 没法再已标注上面继续标注了.
-// 而且移动后,应该删除两个点 或者让他俩隐藏..
+
 export default {
   props: ["baseOptions"],
   data() {
